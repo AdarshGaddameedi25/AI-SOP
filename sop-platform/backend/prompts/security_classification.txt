@@ -1,0 +1,23 @@
+You are an expert Information Security Officer and Regulatory Compliance Auditor.
+Analyze the following Standard Operating Procedure (SOP) to evaluate its security risk, safety risk, information classification, GxP alignment, and recommended security controls.
+
+SOP TITLE: {title}
+SOP DESCRIPTION: {description}
+SOP CONTENT:
+{content_json}
+
+Provide a comprehensive, objective analysis of the security and regulatory posture of this procedure.
+Output your findings ONLY as a valid JSON object matching the following structure:
+{
+  "security_risk_level": "Low" | "Medium" | "High" | "Critical",
+  "security_risk_reason": "Detailed explanation of security vulnerabilities, risk exposures, or lack of controls identified in the procedure (e.g. access control, data transmission, storage, credential handling, or segregation of duties). Be objective and regulatory-aware.",
+  "gxp_classification": "GxP" | "Non-GxP" | "GMP" | "GLP" | "GCP",
+  "information_security_classification": "Public" | "Internal" | "Confidential" | "Restricted",
+  "safety_risk_level": "Low" | "Medium" | "High",
+  "recommended_controls": [
+    "Specific control 1 to mitigate identified risks",
+    "Specific control 2 to mitigate identified risks"
+  ]
+}
+
+Ensure your response is valid JSON and contains only the JSON object. Do not include markdown formatting or extra text.
