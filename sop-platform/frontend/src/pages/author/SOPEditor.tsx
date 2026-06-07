@@ -139,8 +139,7 @@ export default function SOPEditor(): JSX.Element {
         const url = URL.createObjectURL(blob)
         pdfUrlRef.current = url
         setPdfObjectUrl(url)
-      } catch 
-      finally { setIsLoadingPdf(false) }
+      } catch { setIsLoadingPdf(false) }
     } catch (e: any) {
       setError(e.response?.data?.error || e.message || 'Generation failed.')
     } finally { setIsGenerating(false) }
