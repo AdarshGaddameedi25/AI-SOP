@@ -1,13 +1,13 @@
-"""
-app.py - Flask application factory and entry point.
-"""
+
 
 import logging
 import os
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
-from flask_jwt_extended import JWTManager
+from flask_jwt_extended import JWTManager, decode_token
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 from config import Config
 from models import db
@@ -20,8 +20,40 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def _get_rate_limit_key() -> str:
+    
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header[len("Bearer "):]
+        try:
+            decoded = decode_token(token, allow_expired=False)
+            user_id = decoded.get("sub") or decoded.get("identity")
+            if user_id:
+                return f"user:{user_id}"
+        except Exception:
+            pass
+    return get_remote_address()
+
+
+def _is_testing() -> bool:
+   
+    try:
+        from flask import current_app
+        return current_app.config.get("TESTING", False)
+    except RuntimeError:
+        return False
+
+
+limiter = Limiter(
+    key_func=_get_rate_limit_key,
+    default_limits=["200 per hour"],
+    default_limits_exempt_when=_is_testing,
+    storage_uri="memory://",
+)
+
+
 def create_app(config_class=Config) -> Flask:
-    """Application factory - creates and fully configures the Flask app."""
+
     app = Flask(__name__)
     app.config.from_object(config_class)
 
@@ -42,8 +74,21 @@ def create_app(config_class=Config) -> Flask:
 
     db.init_app(app)
     JWTManager(app)
+    limiter.init_app(app)
 
-    CORS(app, resources={r"/api/*": {"origins": ["http://localhost:3000", "http://localhost:5173"]}})
+    @app.errorhandler(429)
+    def ratelimit_handler(e):
+       
+        return jsonify({
+            "success": False,
+            "error": "Too many requests. Please slow down and try again later.",
+            "retry_after": str(e.description),
+        }), 429
+
+    CORS(app, resources={r"/api/*": {
+        "origins": ["http://localhost:3000", "http://localhost:5173"],
+        "supports_credentials": True,
+    }})
 
     from routes.auth_routes import auth_bp
     from routes.sop_routes import sop_bp
@@ -63,11 +108,11 @@ def create_app(config_class=Config) -> Flask:
 
     @app.route("/api/v1/health", methods=["GET"])
     def health():
-        """Public liveness check."""
+
         return jsonify({"success": True, "data": {"status": "ok"}}), 200
 
     with app.app_context():
-        import models.db_models  # noqa: F401
+        import models.db_models  
         db.create_all()
         logger.info("Database tables verified / created.")
 
@@ -78,4 +123,3 @@ def create_app(config_class=Config) -> Flask:
 if __name__ == "__main__":
     flask_app = create_app()
     flask_app.run(host="0.0.0.0", port=5001, debug=True)
-

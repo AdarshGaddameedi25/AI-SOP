@@ -1,18 +1,14 @@
-"""
-routes/auth_routes.py — Authentication endpoints (register, login, me).
 
-Enterprise registration policy:
-  - Self-registration is open (anyone can register)
-  - All new users default to 'author' role
-  - Admin uses /api/v1/admin/users/<id>/role to promote users to reviewer/approver/admin
-
-Prefix: /api/v1/auth
-"""
 
 import logging
 
 from flask import Blueprint, request
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import (
+    create_access_token,
+    create_refresh_token,
+    jwt_required,
+    get_jwt_identity,
+)
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from models import db
@@ -34,18 +30,10 @@ logger = logging.getLogger(__name__)
 auth_bp = Blueprint("auth", __name__)
 
 
-
 @auth_bp.route("/register", methods=["POST"])
 def register():
-    """
-    Register a new user account.
 
-    Enterprise policy: all self-registered users receive the 'author' role.
-    Role upgrades (reviewer, approver, admin) must be performed by an Admin
-    via PUT /api/v1/admin/users/<id>/role.
 
-    Any 'role' field in the registration body is ignored for security.
-    """
     try:
         data = request.get_json(silent=True) or {}
 
@@ -66,7 +54,7 @@ def register():
             username=username,
             email=email,
             password_hash=generate_password_hash(data["password"]),
-            role=DEFAULT_USER_ROLE,  # Always 'author' — Admin promotes later
+            role=DEFAULT_USER_ROLE, 
         )
         db.session.add(new_user)
         db.session.commit()
@@ -87,10 +75,9 @@ def register():
         return server_error_response()
 
 
-
 @auth_bp.route("/login", methods=["POST"])
 def login():
-    """Authenticate a user and return a JWT access token."""
+
     try:
         data = request.get_json(silent=True) or {}
 
@@ -104,11 +91,17 @@ def login():
         if user is None or user.is_deleted or not check_password_hash(user.password_hash, data["password"]):
             return unauthorized_response("Invalid email or password.")
 
-        token = create_access_token(identity=str(user.id))
+        access_token = create_access_token(identity=str(user.id))
+        refresh_token = create_refresh_token(identity=str(user.id))
+
         logger.info("User logged in: id=%s username=%s role=%s", user.id, user.username, user.role)
 
         return success_response(
-            {"access_token": token, "user": serialize_user(user)},
+            {
+                "access_token": access_token,
+                "refresh_token": refresh_token,
+                "user": serialize_user(user),
+            },
             message="Login successful.",
         )
 
@@ -117,11 +110,38 @@ def login():
         return server_error_response()
 
 
+@auth_bp.route("/refresh", methods=["POST"])
+@jwt_required(refresh=True)
+def refresh():
+
+    try:
+        user_id = get_jwt_identity()
+        user = db.session.get(User, int(user_id))
+
+        if user is None or user.is_deleted:
+            return unauthorized_response("User account not found.")
+
+        new_access_token = create_access_token(identity=user_id)
+        logger.info("Access token refreshed for user_id=%s", user_id)
+
+        return success_response(
+            {"access_token": new_access_token, "user": serialize_user(user)},
+            message="Token refreshed.",
+        )
+
+    except Exception:
+        logger.exception("Unexpected error during token refresh.")
+        return server_error_response()
+
+
+@auth_bp.route("/logout", methods=["POST"])
+def logout():
+    return success_response(None, message="Logged out successfully.")
+
 
 @auth_bp.route("/me", methods=["GET"])
 @jwt_required()
 def me():
-    """Return the currently authenticated user's profile."""
     try:
         user_id = int(get_jwt_identity())
         user = db.session.get(User, user_id)

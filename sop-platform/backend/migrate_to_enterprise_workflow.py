@@ -1,36 +1,3 @@
-"""
-migrate_to_enterprise_workflow.py — Safe database migration script.
-
-Upgrades the database from the 3-role/4-status system to the
-enterprise 4-role/6-status architecture.
-
-Changes applied:
-  1. Add new columns to 'sops' table:
-     - current_approver (INTEGER FK → users.id)
-     - reviewer_approved_at (DATETIME)
-     - approved_at (DATETIME)
-
-  2. Add new column to 'approvals' table:
-     - approval_stage (VARCHAR(20), default 'review')
-
-  3. Add new column to 'compliance_reports' table:
-     - triggered_by (INTEGER FK → users.id)
-
-  4. Migrate existing SOP statuses:
-     - 'review'    → 'under_review'
-     - 'approved'  → 'final_approved'
-     - 'rejected'  → 'review_rejected'
-
-  5. Populate approval_stage for existing Approval rows → 'review'
-
-  6. Add new database index: idx_sop_current_approver
-
-Usage:
-  cd sop-platform/backend
-  python migrate_to_enterprise_workflow.py
-
-The script is idempotent — safe to run multiple times.
-"""
 
 import sys
 import os
@@ -51,14 +18,12 @@ from sqlalchemy import text, inspect
 
 
 def column_exists(connection, table_name: str, column_name: str) -> bool:
-    """Check if a column exists in a table without failing if it doesn't."""
     inspector = inspect(connection)
     columns = [col["name"] for col in inspector.get_columns(table_name)]
     return column_name in columns
 
 
 def index_exists(connection, index_name: str) -> bool:
-    """Check if an index exists by name (works for PostgreSQL and SQLite)."""
     try:
         result = connection.execute(
             text("SELECT indexname FROM pg_indexes WHERE indexname = :name"),
@@ -77,7 +42,6 @@ def index_exists(connection, index_name: str) -> bool:
 
 
 def run_migration():
-    """Execute all migration steps."""
     app = create_app()
 
     with app.app_context():

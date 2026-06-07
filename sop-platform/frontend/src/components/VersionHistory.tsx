@@ -13,7 +13,7 @@ export default function VersionHistory({ sopId, currentVersion }: VersionHistory
   const [versions, setVersions] = useState<SOPVersionHistory[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
+
   const [selectedVersion, setSelectedVersion] = useState<SOPVersionHistory | null>(null)
   const [loadingDetail, setLoadingDetail] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)

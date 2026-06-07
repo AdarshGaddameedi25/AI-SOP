@@ -1,23 +1,4 @@
-"""
-routes/admin_routes.py — Platform governance endpoints (Admin only).
 
-Admin is the system governance controller — NOT a document lifecycle participant.
-
-Admin responsibilities (this blueprint):
-  - User management (list, role assignment)
-  - Workflow monitoring (SOP activity by status)
-  - Compliance activity monitoring (read-only)
-  - System dashboard (aggregate stats)
-
-Admin CANNOT:
-  - Edit SOP content (blocked in sop_routes.py)
-  - Trigger compliance checks (blocked in compliance_routes.py)
-  - Participate in workflow transitions (blocked in workflow_service.py)
-
-All endpoints require JWT + admin role.
-
-Prefix: /api/v1/admin
-"""
 
 import logging
 import sqlalchemy
@@ -43,7 +24,7 @@ admin_bp = Blueprint("admin", __name__)
 
 
 def _require_admin(user_id: int) -> tuple[User | None, str | None]:
-    """Load and verify the user has admin role. Returns (user, error)."""
+    
     user = db.session.get(User, user_id)
     if user is None:
         return None, "Authenticated user not found."
@@ -56,10 +37,7 @@ def _require_admin(user_id: int) -> tuple[User | None, str | None]:
 @admin_bp.route("/users", methods=["GET"])
 @jwt_required()
 def list_users():
-    """
-    Return a paginated list of all platform users.
-    Admin only — for user management and role oversight.
-    """
+   
     try:
         user_id = int(get_jwt_identity())
         admin_user, auth_error = _require_admin(user_id)
@@ -98,14 +76,7 @@ def list_users():
 @admin_bp.route("/users/<int:target_user_id>/role", methods=["PUT"])
 @jwt_required()
 def update_user_role(target_user_id: int):
-    """
-    Assign or change a user's role.
-    Admin only — this is the sole mechanism for role promotion/demotion.
-
-    Constraints:
-      - Admin cannot change their own role (prevents accidental self-lockout)
-      - New role must be one of the 4 valid roles
-    """
+    
     try:
         user_id = int(get_jwt_identity())
         admin_user, auth_error = _require_admin(user_id)
@@ -164,15 +135,7 @@ def update_user_role(target_user_id: int):
 @admin_bp.route("/dashboard", methods=["GET"])
 @jwt_required()
 def admin_dashboard():
-    """
-    Return platform-wide aggregate statistics for the Admin governance dashboard.
-
-    Includes:
-      - SOP counts by status
-      - User counts by role
-      - Recent workflow activity count
-      - Compliance activity summary
-    """
+    
     try:
         user_id = int(get_jwt_identity())
         _, auth_error = _require_admin(user_id)
@@ -235,10 +198,6 @@ def admin_dashboard():
 @admin_bp.route("/workflow-activity", methods=["GET"])
 @jwt_required()
 def workflow_activity():
-    """
-    Return recent workflow transition audit log entries.
-    Admin only — for monitoring the SOP pipeline activity.
-    """
     try:
         user_id = int(get_jwt_identity())
         _, auth_error = _require_admin(user_id)
@@ -280,11 +239,7 @@ def workflow_activity():
 @admin_bp.route("/compliance-activity", methods=["GET"])
 @jwt_required()
 def compliance_activity():
-    """
-    Return recent compliance check audit events.
-    Admin only — read-only governance visibility into compliance activity.
-    Admin cannot trigger new compliance checks (Reviewer only).
-    """
+
     try:
         user_id = int(get_jwt_identity())
         _, auth_error = _require_admin(user_id)
@@ -317,10 +272,7 @@ def compliance_activity():
 @admin_bp.route("/users/<int:target_user_id>", methods=["DELETE"])
 @jwt_required()
 def delete_user(target_user_id: int):
-    """
-    Delete a user account from the platform.
-    Admin only — removes unnecessary users based on permissions.
-    """
+
     try:
         user_id = int(get_jwt_identity())
         admin_user, auth_error = _require_admin(user_id)

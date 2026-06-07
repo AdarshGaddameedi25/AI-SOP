@@ -40,10 +40,9 @@ export default function AuthorDashboard(): JSX.Element {
     fetchSops(page)
   }, [page])
 
-
   const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this SOP? This action cannot be undone.')) return
-    
+
     try {
       const res = await deleteSopApi(id)
       if (res.success) {
@@ -99,8 +98,6 @@ export default function AuthorDashboard(): JSX.Element {
         )}
       </div>
 
-
-
       {error && (
         <div style={{
           backgroundColor: 'var(--error-subtle)',
@@ -134,7 +131,7 @@ export default function AuthorDashboard(): JSX.Element {
           Loading SOP list...
         </div>
       ) : sops.length === 0 ? (
-        
+
         <div style={{
           border: '1px dashed var(--border-strong)',
           borderRadius: 'var(--r-lg)',
@@ -171,7 +168,7 @@ export default function AuthorDashboard(): JSX.Element {
           </button>
         </div>
       ) : (
-        
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-4)' }}>
           <div style={{
             border: '1px solid var(--border)',

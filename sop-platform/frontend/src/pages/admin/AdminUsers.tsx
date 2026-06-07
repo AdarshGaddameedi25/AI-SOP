@@ -149,7 +149,7 @@ export default function AdminUsers(): JSX.Element {
           Loading user records...
         </div>
       ) : users.length === 0 ? (
-        
+
         <div style={{
           border: '1px dashed var(--border-strong)',
           borderRadius: 'var(--r-lg)',
@@ -163,7 +163,7 @@ export default function AdminUsers(): JSX.Element {
           </p>
         </div>
       ) : (
-        
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-4)' }}>
           <div style={{
             border: '1px solid var(--border)',
@@ -194,7 +194,7 @@ export default function AdminUsers(): JSX.Element {
               <tbody>
                 {users.map(u => {
                   const isSelf = String(u.id) === String(currentUser?.id)
-                  
+
                   return (
                     <tr
                       key={u.id}

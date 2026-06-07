@@ -1,16 +1,3 @@
-"""
-services/export_service.py - PDF and DOCX export generators for SOP documents.
-
-PDF uses ReportLab (professional layout, headers, footers, page numbers, watermark).
-DOCX uses python-docx (styled headings, sections, approval block table).
-
-Both formats:
-  - Include all 9 SOP content sections
-  - Add a DRAFT/CONFIDENTIAL watermark diagonal text for non-approved SOPs
-  - Format metadata in a clean header table
-  - Structure procedures as numbered steps
-  - Format approval block as a signature table
-"""
 
 import io
 import logging
@@ -29,53 +16,46 @@ _STATUS_WATERMARKS = {
 
 
 def _get_watermark_text(status: str) -> str | None:
-    """Return watermark text for non-approved SOPs, or None if approved."""
+   
     return _STATUS_WATERMARKS.get(status)
 
 
 _UNICODE_REPLACEMENTS = {
-    "\u2013": "-",    # en dash
-    "\u2014": "-",    # em dash
-    "\u2015": "-",    # horizontal bar
-    "\u2018": "'",    # left single quote
-    "\u2019": "'",    # right single quote
-    "\u201c": '"',    # left double quote
-    "\u201d": '"',    # right double quote
-    "\u2022": "-",    # bullet
-    "\u2023": "-",    # triangular bullet
-    "\u25cf": "-",    # black circle
-    "\u25a0": " ",    # black square
-    "\u25aa": " ",    # small black square
-    "\u2610": " ",    # ballot box
-    "\u2611": "[x]",  # ballot box with check
-    "\u2612": "[ ]",  # ballot box with X
-    "\u2713": "OK",   # check mark
-    "\u2714": "OK",   # heavy check mark
-    "\u2715": "X",    # multiplication X
-    "\u2716": "X",    # heavy X
-    "\u26a0": "!",    # warning sign
-    "\u00e2": "a",    # a circumflex (often misencoded)
+    "\u2013": "-",   
+    "\u2014": "-",    
+    "\u2015": "-",    
+    "\u2018": "'",    
+    "\u2019": "'",    
+    "\u201c": '"',    
+    "\u201d": '"',    
+    "\u2022": "-",   
+    "\u2023": "-",    
+    "\u25cf": "-",    
+    "\u25a0": " ",    
+    "\u25aa": " ",    
+    "\u2610": " ",    
+    "\u2611": "[x]",  
+    "\u2612": "[ ]", 
+    "\u2713": "OK",  
+    "\u2714": "OK",   
+    "\u2715": "X",    
+    "\u2716": "X",   
+    "\u26a0": "!",   
+    "\u00e2": "a",    
     "\u00e2\u0080\u0099": "'",
-    "\ufeff": "",     # BOM
-    "\u200b": "",     # zero-width space
-    "\u00a0": " ",    # non-breaking space
-    "\u00ad": "-",    # soft hyphen
-    "\u2010": "-",    # hyphen
-    "\u2011": "-",    # non-breaking hyphen
-    "\u2012": "-",    # figure dash
-    "\u2026": "...",  # ellipsis
-    "\u00b7": ".",    # middle dot
+    "\ufeff": "",     
+    "\u200b": "",     
+    "\u00ad": "-",    
+    "\u2010": "-",
+    "\u2011": "-",    
+    "\u2012": "-",    
+    "\u2026": "...",  
+    "\u00b7": ".",  
 }
 
 
 def _clean(text: str) -> str:
-    """
-    Sanitize text for ReportLab PDF rendering.
-
-    Replaces common Unicode typographic characters with safe ASCII equivalents,
-    then drops any remaining characters outside the Latin-1 range (they would
-    render as solid black rectangles in Helvetica).
-    """
+   
     if not isinstance(text, str):
         text = str(text) if text is not None else ""
 
@@ -100,11 +80,7 @@ def _clean(text: str) -> str:
 
 
 def generate_pdf(sop) -> tuple[bytes | None, str | None]:
-    """
-    Generate a professional enterprise-grade PDF for the given SOP ORM object.
 
-    Returns (pdf_bytes, None) on success, or (None, error_message) on failure.
-    """
     try:
         from reportlab.lib import colors
         from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
@@ -413,7 +389,7 @@ def generate_pdf(sop) -> tuple[bytes | None, str | None]:
 
 
 def _draw_page_frame(canvas, doc, watermark_text, generated_at, sop, is_first: bool):
-    """Draw header, footer, and optional watermark on every page."""
+    
     from reportlab.lib import colors
     from reportlab.lib.units import cm, mm
 
@@ -450,11 +426,7 @@ def _draw_page_frame(canvas, doc, watermark_text, generated_at, sop, is_first: b
 
 
 def generate_docx(sop) -> tuple[bytes | None, str | None]:
-    """
-    Generate a professional enterprise-grade DOCX for the given SOP ORM object.
-
-    Returns (docx_bytes, None) on success, or (None, error_message) on failure.
-    """
+   
     try:
         from docx import Document
         from docx.enum.text import WD_ALIGN_PARAGRAPH

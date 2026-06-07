@@ -1,6 +1,3 @@
-"""
-utils/helpers.py - Shared utility functions used across the application.
-"""
 
 import logging
 import re
@@ -12,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 
 def log_action(db, AuditLog, sop_id, user_id: int, action: str, details: str) -> None:
-    """Insert an audit log entry; silently swallows errors to protect the main request."""
     if action not in AUDIT_ACTIONS:
         logger.warning(
             "log_action called with unknown action '%s' - skipping audit log.", action
@@ -37,14 +33,6 @@ def log_action(db, AuditLog, sop_id, user_id: int, action: str, details: str) ->
 
 
 def generate_sop_number(db, SOP, department: str) -> str:
-    """Generate the next sequential SOP number for the given department.
-
-    Format: {DEPT_CODE}-{YEAR}-{SEQ:03d}
-    Example: IT-2026-001, FIN-2026-012
-
-    Queries existing SOP numbers in the DB to find the highest sequence for
-    the current year and department, then returns the next one.
-    """
     dept_code = DEPARTMENT_CODES.get(department, department[:3].upper())
     year = datetime.now(timezone.utc).year
     prefix = f"{dept_code}-{year}-"
@@ -70,7 +58,6 @@ def generate_sop_number(db, SOP, department: str) -> str:
 
 
 def sanitize_string(value: str, max_length: int | None = None) -> str:
-    """Strip whitespace from a string and optionally truncate it."""
     cleaned = value.strip() if isinstance(value, str) else ""
     if max_length and len(cleaned) > max_length:
         cleaned = cleaned[:max_length]
@@ -78,7 +65,6 @@ def sanitize_string(value: str, max_length: int | None = None) -> str:
 
 
 def parse_pagination_params(args: dict) -> tuple[int, int]:
-    """Parse and clamp page/limit query parameters."""
     from constants import DEFAULT_PAGE, DEFAULT_LIMIT, MAX_PAGE_LIMIT
 
     try:
@@ -93,16 +79,11 @@ def parse_pagination_params(args: dict) -> tuple[int, int]:
 
 
 def parse_json_request(req) -> tuple[dict | None, str | None]:
-    """Safely parse a JSON request body, returning (data, error).
-
-    - Returns (dict, None) on success (or None if body empty).
-    - Returns (None, error_message) when JSON is invalid or cannot be parsed.
-    """
     import json
 
     try:
         raw = req.get_data(as_text=True)
-    except Exception as exc:  # pragma: no cover - very defensive
+    except Exception as exc: 
         return None, f"Could not read request body: {exc}"
 
     if raw is None or raw.strip() == "":
@@ -120,10 +101,6 @@ def parse_json_request(req) -> tuple[dict | None, str | None]:
 
 
 def bump_minor_version(version_str: str) -> str:
-    """
-    Increments the minor version of a string (e.g. "0.1" -> "0.2").
-    If the string is invalid or not in x.y format, default to "0.1".
-    """
     if not version_str:
         return "0.1"
     try:
@@ -138,10 +115,6 @@ def bump_minor_version(version_str: str) -> str:
 
 
 def bump_major_version(version_str: str) -> str:
-    """
-    Increments the major version (e.g. "0.1" -> "1.0", "1.5" -> "2.0").
-    If the string is invalid, default to "1.0".
-    """
     if not version_str:
         return "1.0"
     try:

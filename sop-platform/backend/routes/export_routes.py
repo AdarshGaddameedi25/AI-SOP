@@ -1,16 +1,3 @@
-"""
-routes/export_routes.py - PDF and DOCX export endpoints for SOP documents.
-
-Prefix: /api/v1/export
-
-Endpoints:
-    GET  /api/v1/export/<sop_id>/pdf          → stream PDF file download
-    POST /api/v1/export/<sop_id>/pdf-preview  → inline PDF preview (no DB save)
-    GET  /api/v1/export/<sop_id>/docx         → stream DOCX file download
-
-Available for ALL SOP statuses. Non-approved SOPs receive a watermark.
-Logs export actions to the audit trail.
-"""
 
 import logging
 import re
@@ -30,7 +17,7 @@ export_bp = Blueprint("export", __name__)
 
 
 def _safe_filename(title: str) -> str:
-    """Convert SOP title to a safe ASCII filename slug."""
+
     slug = re.sub(r"[^\w\s-]", "", title.lower())
     slug = re.sub(r"[\s_-]+", "_", slug).strip("_")
     return slug[:60] or "sop"
@@ -40,7 +27,7 @@ def _safe_filename(title: str) -> str:
 @export_bp.route("/<int:sop_id>/pdf", methods=["GET"])
 @jwt_required()
 def export_pdf(sop_id: int):
-    """Generate and stream a PDF export of the SOP. All statuses allowed."""
+
     try:
         user_id = int(get_jwt_identity())
 
@@ -81,13 +68,7 @@ def export_pdf(sop_id: int):
 @export_bp.route("/<int:sop_id>/pdf-preview", methods=["POST"])
 @jwt_required()
 def preview_pdf(sop_id: int):
-    """
-    Generate an inline PDF preview from AI-generated content WITHOUT saving to DB.
 
-    Accepts a JSON body: { "content": { ...SOPContent... } }
-    Returns the PDF inline (Content-Disposition: inline) so browsers can render it in an iframe.
-    No audit log is written — this is a transient preview only.
-    """
     try:
         from flask import request
 
@@ -100,7 +81,6 @@ def preview_pdf(sop_id: int):
         if not preview_content:
             return error_response("Request body must include a 'content' field.", 400)
 
-        # Build a lightweight in-memory SOP proxy — never touches the DB
         class _SOPProxy:
             def __init__(self, real_sop, content_override):
                 self.id = real_sop.id
@@ -112,7 +92,7 @@ def preview_pdf(sop_id: int):
                 self.approved_at = real_sop.approved_at
                 self.creator = getattr(real_sop, "creator", None)
                 self.created_by = getattr(real_sop, "created_by", None)
-                self.content = content_override  # use the preview content
+                self.content = content_override 
 
         proxy = _SOPProxy(sop, preview_content)
         pdf_bytes, err = export_service.generate_pdf(proxy)
@@ -127,7 +107,7 @@ def preview_pdf(sop_id: int):
         )
         response.headers["Content-Disposition"] = "inline; filename=preview.pdf"
         response.headers["Content-Length"] = str(len(pdf_bytes))
-        # Allow iframe embedding from the same origin
+        
         response.headers["X-Frame-Options"] = "SAMEORIGIN"
         return response
 
@@ -139,7 +119,7 @@ def preview_pdf(sop_id: int):
 @export_bp.route("/<int:sop_id>/docx", methods=["GET"])
 @jwt_required()
 def export_docx(sop_id: int):
-    """Generate and stream a DOCX export of the SOP. All statuses allowed."""
+
     try:
         user_id = int(get_jwt_identity())
 

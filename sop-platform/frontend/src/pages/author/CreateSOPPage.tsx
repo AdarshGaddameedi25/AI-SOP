@@ -278,7 +278,6 @@ export default function CreateSOPPage(): JSX.Element {
         .spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; animation: spin-csp 0.7s linear infinite; }
       `}</style>
 
-      {/* Top bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', height: '56px', borderBottom: '1px solid var(--border)', flexShrink: 0, backgroundColor: '#ffffff' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <button className="csp-btn-outline" onClick={() => navigate('/author/sops')} style={{ padding: '6px 14px' }}>
@@ -297,10 +296,8 @@ export default function CreateSOPPage(): JSX.Element {
         </div>
       </div>
 
-      {/* Body */}
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
 
-        {/* LEFT: Form */}
         <div style={{ width: '22%', flexShrink: 0, borderRight: '1px solid var(--border)', overflowY: 'auto', backgroundColor: '#ffffff' }}>
           <div style={{ padding: '20px 18px' }}>
             <p style={{ margin: '0 0 16px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--accent)' }}>SOP Details</p>
@@ -346,7 +343,6 @@ export default function CreateSOPPage(): JSX.Element {
           </div>
         </div>
 
-        {/* CENTER: Editable Section Cards */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border)', minHeight: 0, backgroundColor: '#f8fafc' }}>
           <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0, backgroundColor: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: '0.04em' }}>SOP Content Editor</span>
@@ -429,7 +425,6 @@ export default function CreateSOPPage(): JSX.Element {
                   <button className="arr-add" onClick={() => setEditReferences(p => [...p, ''])}>+ Add Reference</button>
                 </SectionCard>
 
-
               </div>
             )}
           </div>
@@ -450,7 +445,6 @@ export default function CreateSOPPage(): JSX.Element {
           )}
         </div>
 
-        {/* RIGHT: PDF Preview */}
         <div style={{ width: '30%', flexShrink: 0, display: 'flex', flexDirection: 'column', backgroundColor: '#ffffff' }}>
           <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
             <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: '0.04em' }}>PDF Preview</span>

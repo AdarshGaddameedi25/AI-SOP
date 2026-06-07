@@ -16,7 +16,7 @@ export default function SOPDetail(): JSX.Element {
   const navigate = useNavigate()
   const location = useLocation()
   const { user } = useAuth()
-  
+
   const highlightQuery = (location.state as any)?.highlightQuery || ''
 
   const [sop, setSop] = useState<SOP | null>(null)
@@ -93,8 +93,6 @@ export default function SOPDetail(): JSX.Element {
       setActionLoading(false)
     }
   }
-
-
 
   if (loading) {
     return (
@@ -330,7 +328,7 @@ export default function SOPDetail(): JSX.Element {
       )}
 
       <div style={{ display: 'flex', gap: 'var(--sp-6)' }}>
-        
+
         <div style={{
           flex: 3,
           backgroundColor: 'var(--bg-secondary)',
@@ -488,7 +486,7 @@ export default function SOPDetail(): JSX.Element {
           display: 'flex',
           flexDirection: 'column',
           gap: 'var(--sp-5)',
-          minWidth: 0 // Prevent flex overflow
+          minWidth: 0 
         }}>
           {sop.status === 'review_rejected' && sop.rejection_comments && (
             <div style={{
@@ -547,9 +545,9 @@ export default function SOPDetail(): JSX.Element {
             <div style={{ display: 'flex', alignItems: 'center' }}>
               <StatusBadge status={sop.status} />
             </div>
-            
+
             <div style={{ width: '100%', height: '1px', backgroundColor: 'var(--border)' }} />
-            
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)', fontSize: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Created By:</span>
@@ -573,8 +571,6 @@ export default function SOPDetail(): JSX.Element {
               )}
             </div>
           </div>
-
-
 
           <VersionHistory sopId={sop.id} currentVersion={sop.version} />
         </div>

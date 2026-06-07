@@ -1,7 +1,7 @@
 import { JSX, createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { User, LoginCredentials, RegisterPayload } from '../types'
-import { loginApi, registerApi, getCurrentUserApi } from '../api/auth'
-import { getToken, setToken, getStoredUser, setStoredUser, clearToken } from '../utils/tokenHelpers'
+import { loginApi, registerApi, getCurrentUserApi, logoutApi } from '../api/auth'
+import { getToken, setToken, setRefreshToken, getStoredUser, setStoredUser, clearToken } from '../utils/tokenHelpers'
 
 interface AuthContextType {
   user: User | null
@@ -51,8 +51,9 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     try {
       const res = await loginApi(credentials)
       if (res.success && res.data) {
-        const { access_token, user: loggedUser } = res.data
+        const { access_token, refresh_token, user: loggedUser } = res.data
         setToken(access_token)
+        setRefreshToken(refresh_token)
         setStoredUser(loggedUser)
         setTokenState(access_token)
         setUserState(loggedUser)
@@ -77,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
   }
 
   const logout = () => {
+    logoutApi()
     clearToken()
     setTokenState(null)
     setUserState(null)

@@ -1,23 +1,10 @@
-"""
-routes/compliance_routes.py — Compliance check and report endpoints.
-
-Compliance Segregation Rules (Enterprise Policy):
-  - POST /compliance/validate      → REVIEWER ONLY (trigger compliance check)
-  - GET  /compliance/<id>/report   → REVIEWER + ADMIN only (read latest report)
-  - Authors and Approvers are FULLY BLOCKED from all compliance data.
-
-This implements realistic enterprise review segregation:
-  Authors must not self-audit their own documents.
-  Compliance grading is an independent quality assurance function.
-
-Prefix: /api/v1/compliance
-"""
 
 import logging
 
 from flask import Blueprint, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
+from app import limiter, _is_testing
 from models import db
 from models.db_models import SOP, ComplianceReport, AuditLog, User
 from services import compliance_service
@@ -37,23 +24,14 @@ compliance_bp = Blueprint("compliance", __name__)
 
 
 def _get_user(user_id: int) -> User | None:
-    """Load the User ORM object for the authenticated user_id."""
     return db.session.get(User, user_id)
 
 
 
 @compliance_bp.route("/validate", methods=["POST"])
 @jwt_required()
+@limiter.limit("5 per minute", error_message="Compliance check limit reached (5/min). Please wait before retrying.", exempt_when=_is_testing)
 def validate_compliance():
-    """
-    Run a full compliance check on an SOP and persist the report.
-
-    RESTRICTED: Reviewer role only.
-    Authors must not self-audit. Approvers review business fit, not compliance.
-
-    The SOP must be in 'under_review' status for compliance to be triggered.
-    This enforces that compliance is only evaluated at the quality gate stage.
-    """
     try:
         user_id = int(get_jwt_identity())
         user = _get_user(user_id)
@@ -126,14 +104,6 @@ def validate_compliance():
 @compliance_bp.route("/<int:sop_id>/report", methods=["GET"])
 @jwt_required()
 def get_compliance_report(sop_id: int):
-    """
-    Fetch the latest compliance report for an SOP.
-
-    RESTRICTED: Reviewer and Admin roles only.
-    - Reviewer: needs it to assess quality during review
-    - Admin: read-only governance oversight
-    - Author and Approver: BLOCKED (compliance data must remain segregated)
-    """
     try:
         user_id = int(get_jwt_identity())
         user = _get_user(user_id)
@@ -185,12 +155,6 @@ def get_compliance_report(sop_id: int):
 @compliance_bp.route("/<int:sop_id>/reports", methods=["GET"])
 @jwt_required()
 def get_compliance_report_history(sop_id: int):
-    """
-    Fetch all historical compliance reports for an SOP, newest first.
-
-    RESTRICTED: Reviewer and Admin roles only.
-    Useful for tracking compliance improvement over review iterations.
-    """
     try:
         user_id = int(get_jwt_identity())
         user = _get_user(user_id)

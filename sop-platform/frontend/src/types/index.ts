@@ -19,7 +19,6 @@ export type ApprovalStage = 'review' | 'final'
 
 export type ExportFormat = 'pdf' | 'docx'
 
-
 export interface User {
   id: string
   username: string
@@ -44,7 +43,6 @@ export interface RegisterPayload {
   email: string
   password: string
 }
-
 
 export interface SOP {
   id: string
@@ -127,7 +125,6 @@ export interface SOPListResponse {
   role_filter: string
 }
 
-
 export interface SectionResult {
   section: string
   passed: boolean
@@ -158,7 +155,6 @@ export interface ComplianceReport {
   created_at: string
 }
 
-
 export interface Approval {
   id: string
   sop_id: string
@@ -184,7 +180,6 @@ export interface WorkflowEvent {
   timestamp: string
 }
 
-
 export interface AuditLog {
   id: string
   action: string
@@ -203,7 +198,6 @@ export interface AuditLogResponse {
   limit: number
   pages: number
 }
-
 
 export interface AdminDashboard {
   sops: {
@@ -236,7 +230,6 @@ export interface AdminUsersResponse {
   role_filter: string | null
 }
 
-
 export interface ApiResponse<T> {
   success: boolean
   data: T
@@ -251,7 +244,6 @@ export interface PaginatedResponse<T> {
   limit: number
   pages: number
 }
-
 
 export interface StatusConfig {
   label: string

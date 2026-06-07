@@ -202,7 +202,7 @@ export default function ApproverDetail(): JSX.Element {
       )}
 
       <div style={{ display: 'flex', gap: 'var(--sp-6)', alignItems: 'flex-start' }}>
-        
+
         <div style={{
           flex: 2,
           backgroundColor: 'var(--bg-secondary)',
@@ -374,7 +374,6 @@ export default function ApproverDetail(): JSX.Element {
               Final Authorizing Sign-off
             </h4>
 
-            
             {sop.status === 'review_approved' ? (
               <button
                 onClick={handleFinalApprove}

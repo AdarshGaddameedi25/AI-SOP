@@ -1,6 +1,3 @@
-"""
-services/ai_service.py - All Gemini API interactions.
-"""
 
 import json
 import logging
@@ -12,7 +9,7 @@ import google.generativeai as genai
 logger = logging.getLogger(__name__)
 
 def _get_openrouter_config() -> tuple[str, str]:
-    """Return (api_key, model) for OpenRouter from environment."""
+
     try:
         from dotenv import load_dotenv
         dotenv_path = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".env"))
@@ -36,14 +33,14 @@ _PROMPTS_DIR = os.path.join(os.path.dirname(__file__), "..", "prompts")
 
 
 def _load_prompt(filename: str) -> str:
-    """Load and return the raw text content of a prompt file."""
+
     path = os.path.normpath(os.path.join(_PROMPTS_DIR, filename))
     with open(path, "r", encoding="utf-8") as fh:
         return fh.read()
 
 
 def _strip_markdown_fences(text: str) -> str:
-    """Remove markdown code fences that Gemini/OpenRouter sometimes wraps output in."""
+
     text = text.strip()
     text = re.sub(r"^```[a-zA-Z]*\n?", "", text)
     text = re.sub(r"\n?```$", "", text)
@@ -51,24 +48,24 @@ def _strip_markdown_fences(text: str) -> str:
 
 
 def _call_llm(prompt: str) -> tuple[str | None, str | None]:
-    """Send a prompt to OpenRouter and return (raw_text, error)."""
     try:
         api_key, model = _get_openrouter_config()
         
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
-            "HTTP-Referer": "http://localhost:5173", # Optional for rankings
-            "X-Title": "SOP Platform" # Optional for rankings
+            "HTTP-Referer": "http://localhost:5173",
+            "X-Title": "SOP Platform"
         }
-        
-        # Merge system prompt into user prompt to avoid 400 errors on some free models
+
+
         data = {
             "model": model,
             "messages": [
                 {"role": "user", "content": f"You are a helpful AI assistant that outputs only valid JSON data as requested.\n\n{prompt}"}
             ],
-            "temperature": 0.2
+            "temperature": 0.2,
+            "max_tokens": 2048,
         }
         
         logger.info(f"Sending request to OpenRouter using model: {model}")
@@ -98,7 +95,7 @@ def _call_llm(prompt: str) -> tuple[str | None, str | None]:
 
 
 def _parse_and_validate_json(raw_text: str, required_keys: list[str]) -> tuple[dict | None, str | None]:
-    """Strip fences, parse JSON, validate required keys, return (parsed_dict, error)."""
+
     cleaned = _strip_markdown_fences(raw_text)
     
     cleaned = re.sub(r',\s*}', '}', cleaned)
@@ -128,11 +125,7 @@ def generate_sop_content(
     version: str = "1.0",
     extra_instructions: str = "",
 ) -> tuple[dict | None, str | None]:
-    """Ask Gemini to generate a complete FDA-grade 12-section SOP document.
-
-    Accepts all 21 input placeholders that the new prompt template requires.
-    Returns (content_dict, None) on success or (None, error_message) on failure.
-    """
+    
     required_keys = [
         "purpose",
         "scope",
@@ -149,7 +142,7 @@ def generate_sop_content(
 
     prompt = (
         prompt_template
-        .replace("{extra_instructions}", f"ADDITIONAL AUTHOR INSTRUCTIONS (must be followed):\n{extra_instructions.strip()}" if extra_instructions.strip() else "")
+        .replace("{extra_instructions}", f" AUTHOR INSTRUCTIONS (must be followed):\n{extra_instructions.strip()}" if extra_instructions.strip() else "")
         .replace("{title}", title)
         .replace("{sop_number}", sop_number)
         .replace("{version}", version)
@@ -209,8 +202,30 @@ def generate_sop_content(
 
 
 
+def _trim_sop_for_audit(sop_content: dict, max_steps: int = 15, max_field_chars: int = 1500) -> dict:
+
+    import copy
+    trimmed = copy.deepcopy(sop_content)
+
+
+    procedure = trimmed.get("procedure")
+    if isinstance(procedure, list) and len(procedure) > max_steps:
+        logger.info(
+            "Trimming SOP procedure from %d steps to %d for audit prompt.",
+            len(procedure), max_steps,
+        )
+        trimmed["procedure"] = procedure[:max_steps]
+
+
+    for key, value in trimmed.items():
+        if isinstance(value, str) and len(value) > max_field_chars:
+            trimmed[key] = value[:max_field_chars] + " [...truncated for audit]"
+
+    return trimmed
+
+
 def _classify_compliance_score(score: int) -> str:
-    """Map a compliance score to the FDA audit classification label."""
+
     if score >= 90:
         return "Audit Ready"
     elif score >= 75:
@@ -222,13 +237,7 @@ def _classify_compliance_score(score: int) -> str:
 
 
 def run_compliance_check(sop_content: dict) -> tuple[dict | None, str | None]:
-    """Ask Gemini to conduct a formal FDA-grade compliance audit of the SOP content.
 
-    Returns (audit_report_dict, None) on success or (None, error_message) on failure.
-    The audit report includes: compliance_score, classification, total_checks,
-    passed_checks, failed_checks, audit_results (5 categories), critical_failures,
-    missing_sections, recommendations.
-    """
     required_keys = ["compliance_score", "classification", "audit_results", "recommendations"]
 
     try:
@@ -237,7 +246,7 @@ def run_compliance_check(sop_content: dict) -> tuple[dict | None, str | None]:
         logger.error("Prompt file 'compliance_check.txt' not found.")
         return None, "Server configuration error: compliance check prompt is missing."
 
-    content_str = json.dumps(sop_content, indent=2)
+    content_str = json.dumps(_trim_sop_for_audit(sop_content), separators=(',', ':'))
     prompt = prompt_template.replace("{sop_content}", content_str)
 
     for attempt in range(1, 3):
@@ -294,37 +303,57 @@ def run_compliance_check(sop_content: dict) -> tuple[dict | None, str | None]:
     return None, "AI compliance check failed. Please try again."
 
 
-def get_embedding(text: str) -> list[float] | None:
-    """Generate text embeddings using Google Generative AI embeddings API."""
-    try:
-        try:
-            from flask import current_app
-            if current_app and current_app.config.get("TESTING"):
-                return [0.1] * 3072
-        except RuntimeError:
-            pass
+def run_security_classification(
+    title: str,
+    description: str,
+    content: dict,
+) -> tuple[dict | None, str | None]:
 
-        try:
-            from dotenv import load_dotenv
-            load_dotenv()
-        except:
-            pass
-            
-        gemini_api_key = os.getenv("GEMINI_API_KEY")
-        if not gemini_api_key:
-            logger.warning("GEMINI_API_KEY not found. Skipping embedding generation.")
-            return None
-            
-        genai.configure(api_key=gemini_api_key)
+    required_keys = [
+        "security_risk_level",
+        "gxp_classification",
+        "information_security_classification",
+        "safety_risk_level",
+        "recommended_controls",
+    ]
+
+    try:
+        prompt_template = _load_prompt("security_classification.txt")
+    except FileNotFoundError:
+        logger.error("Prompt file 'security_classification.txt' not found.")
+        return None, "Server configuration error: security classification prompt is missing."
+
+    content_str = json.dumps(content, separators=(",", ":"))
+    prompt = (
+        prompt_template
+        .replace("{title}", title)
+        .replace("{description}", description)
+        .replace("{content_json}", content_str)
+    )
+
+    for attempt in range(1, 3):
+        logger.info("Security classification attempt %d for title=%r", attempt, title)
+        raw, api_error = _call_llm(prompt)
+
+        if api_error:
+            return None, api_error
+
+        parsed, parse_error = _parse_and_validate_json(raw, required_keys)
+
+        if parse_error:
+            logger.warning("Classification attempt %d failed: %s", attempt, parse_error)
+            if attempt == 2:
+                return None, "AI could not produce a valid classification after two attempts."
+            continue
+
         
-        result = genai.embed_content(
-            model="models/gemini-embedding-001",
-            content=text,
-            task_type="retrieval_document"
-        )
-        return result["embedding"]
-    except Exception as exc:
-        logger.exception("Failed to generate embedding: %s", exc)
-        return None
+        if not isinstance(parsed.get("recommended_controls"), list):
+            parsed["recommended_controls"] = []
+
+        logger.info("Security classification succeeded on attempt %d.", attempt)
+        return parsed, None
+
+    return None, "AI security classification failed. Please try again."
+
 
 

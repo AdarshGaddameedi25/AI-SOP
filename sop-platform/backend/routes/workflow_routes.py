@@ -1,19 +1,4 @@
-"""
-routes/workflow_routes.py — SOP lifecycle transition endpoints.
 
-Enterprise 5-Stage Workflow Endpoints:
-  POST /workflow/<id>/submit-review    → Author only        (draft → under_review)
-  POST /workflow/<id>/reviewer-approve → Reviewer only      (under_review → review_approved)
-  POST /workflow/<id>/reviewer-reject  → Reviewer only      (under_review → review_rejected)
-  POST /workflow/<id>/final-approve    → Approver only      (review_approved → final_approved)
-  POST /workflow/<id>/resubmit         → Author only        (review_rejected → draft)
-  POST /workflow/<id>/archive          → Admin only         (final_approved → archived)
-
-Strict separation of duties — each endpoint enforces role isolation at the
-service layer. Routes are thin: JWT extraction, JSON parsing, response formatting.
-
-Prefix: /api/v1/workflow
-"""
 
 import logging
 
@@ -35,12 +20,12 @@ workflow_bp = Blueprint("workflow", __name__)
 
 
 def _get_current_user(user_id: int):
-    """Load the User ORM object for the authenticated user_id."""
+   
     return db.session.get(User, user_id)
 
 
 def _map_error_code(error: str) -> int:
-    """Map an error message string to an appropriate HTTP status code."""
+
     lower = error.lower()
     if "not found" in lower:
         return 404
@@ -53,10 +38,7 @@ def _map_error_code(error: str) -> int:
 @workflow_bp.route("/<int:sop_id>/submit-review", methods=["POST"])
 @jwt_required()
 def submit_for_review(sop_id: int):
-    """
-    Submit an SOP for Reviewer quality gate.
-    Only the original author of the SOP can perform this action.
-    """
+    
     try:
         user_id = int(get_jwt_identity())
         user = _get_current_user(user_id)
@@ -83,11 +65,7 @@ def submit_for_review(sop_id: int):
 @workflow_bp.route("/<int:sop_id>/reviewer-approve", methods=["POST"])
 @jwt_required()
 def reviewer_approve(sop_id: int):
-    """
-    Reviewer quality gate: approve the SOP.
-    SOP moves to REVIEW_APPROVED and is sent to Approver for final authorization.
-    Only a Reviewer can perform this action.
-    """
+
     try:
         user_id = int(get_jwt_identity())
         user = _get_current_user(user_id)
@@ -121,11 +99,7 @@ def reviewer_approve(sop_id: int):
 @workflow_bp.route("/<int:sop_id>/reviewer-reject", methods=["POST"])
 @jwt_required()
 def reviewer_reject(sop_id: int):
-    """
-    Reviewer quality gate: reject the SOP and return it to the Author.
-    Rejection comments are mandatory to provide actionable feedback to the Author.
-    Only a Reviewer can perform this action.
-    """
+    
     try:
         user_id = int(get_jwt_identity())
         user = _get_current_user(user_id)
@@ -166,13 +140,7 @@ def reviewer_reject(sop_id: int):
 @workflow_bp.route("/<int:sop_id>/final-approve", methods=["POST"])
 @jwt_required()
 def final_approve(sop_id: int):
-    """
-    Final business authorization by Approver.
-    SOP moves from REVIEW_APPROVED → FINAL_APPROVED and becomes the official document.
-    Only an Approver can perform this action.
-    The Approver cannot reject — they may only authorize.
-    If they have concerns, they coordinate with the Reviewer outside the system.
-    """
+    
     try:
         user_id = int(get_jwt_identity())
         user = _get_current_user(user_id)
@@ -206,10 +174,6 @@ def final_approve(sop_id: int):
 @workflow_bp.route("/<int:sop_id>/resubmit", methods=["POST"])
 @jwt_required()
 def resubmit_sop(sop_id: int):
-    """
-    Resubmit a rejected SOP back to DRAFT for revision.
-    Only the original author of the SOP can resubmit.
-    """
     try:
         user_id = int(get_jwt_identity())
         user = _get_current_user(user_id)
@@ -236,10 +200,6 @@ def resubmit_sop(sop_id: int):
 @workflow_bp.route("/<int:sop_id>/archive", methods=["POST"])
 @jwt_required()
 def archive_sop(sop_id: int):
-    """
-    Archive a finally-approved SOP.
-    Admin role required — archival is a governance action, not a document lifecycle action.
-    """
     try:
         user_id = int(get_jwt_identity())
         user = _get_current_user(user_id)
@@ -266,7 +226,6 @@ def archive_sop(sop_id: int):
 @workflow_bp.route("/<int:sop_id>/approve", methods=["POST"])
 @jwt_required()
 def deprecated_approve(sop_id: int):
-    """Deprecated: use /reviewer-approve or /final-approve instead."""
     return error_response(
         "This endpoint has been deprecated. "
         "Use POST /workflow/<id>/reviewer-approve (Reviewer) "
@@ -278,7 +237,6 @@ def deprecated_approve(sop_id: int):
 @workflow_bp.route("/<int:sop_id>/reject", methods=["POST"])
 @jwt_required()
 def deprecated_reject(sop_id: int):
-    """Deprecated: use /reviewer-reject instead."""
     return error_response(
         "This endpoint has been deprecated. "
         "Use POST /workflow/<id>/reviewer-reject (Reviewer) instead.",

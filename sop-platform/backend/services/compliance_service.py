@@ -1,14 +1,3 @@
-"""
-services/compliance_service.py - Rule-based scoring + AI analysis for SOP compliance.
-
-Two-phase compliance check:
-1. Rule-based: Check which of the 5 core sections exist in the content.
-2. AI-based: Send full content to Gemini for detailed compliance analysis.
-
-The final report merges both, persists to ComplianceReport table, and returns
-a rich result including: score, classification, passed_checks, failed_checks,
-missing_sections, and recommendations.
-"""
 
 import logging
 
@@ -25,7 +14,6 @@ logger = logging.getLogger(__name__)
 
 
 def _classify_score(score: int) -> str:
-    """Return the compliance classification label for a given score."""
     if score >= COMPLIANCE_CLASSIFICATIONS["audit_ready"]:
         return COMPLIANCE_CLASSIFICATION_LABELS["audit_ready"]
     elif score >= COMPLIANCE_CLASSIFICATIONS["minor_gaps"]:
@@ -37,7 +25,6 @@ def _classify_score(score: int) -> str:
 
 
 def calculate_rule_based_score(content: dict) -> tuple[int, list[str]]:
-    """Score an SOP's content based on presence of the 5 core required sections."""
     missing: list[str] = []
     points = 0
 
@@ -64,17 +51,6 @@ def run_full_compliance_check(
     db, SOP, ComplianceReport, sop_id: int,
     triggered_by_user_id: int | None = None,
 ) -> tuple[dict | None, str | None]:
-    """
-    Orchestrate a full compliance check for the given SOP ID.
-
-    Steps:
-    1. Load SOP from DB.
-    2. Run rule-based structural check (score 0-100).
-    3. Run AI Gemini compliance analysis.
-    4. Merge results (combine missing sections, use AI score if available, merge lists).
-    5. Persist ComplianceReport to database.
-    6. Return serialized report.
-    """
     sop = SOP.query.filter_by(id=sop_id, is_deleted=False).first()
     if sop is None:
         return None, f"SOP with id {sop_id} not found."

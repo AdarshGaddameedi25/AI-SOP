@@ -6,21 +6,17 @@ import VersionHistory from '../../components/VersionHistory'
 
 import { submitReviewApi, resubmitSopApi } from '../../api/workflow'
 
-/* ─── component ───────────────────────────────────────────────────────────── */
 export default function SOPEditor(): JSX.Element {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
 
-  /* metadata */
   const [sop, setSop] = useState<SOP | null>(null)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [templateType, setTemplateType] = useState('')
 
-  /* section content (hidden from view; populated after generation) */
   const [generatedContent, setGeneratedContent] = useState<SOPContent | null>(null)
 
-  /* AI */
   const [showPromptPanel, setShowPromptPanel] = useState(false)
   const [userPrompt, setUserPrompt] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
@@ -28,7 +24,6 @@ export default function SOPEditor(): JSX.Element {
   const [pdfObjectUrl, setPdfObjectUrl] = useState<string | null>(null)
   const pdfUrlRef = useRef<string | null>(null)
 
-  /* page */
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -61,7 +56,6 @@ export default function SOPEditor(): JSX.Element {
       finally { setLoading(false) }
     })()
   }, [id, navigate])
-
 
   const handleSave = async (silent = false) => {
     if (!id) return false
@@ -97,7 +91,7 @@ export default function SOPEditor(): JSX.Element {
       setSubmitting(false)
       return
     }
-    
+
     try {
       let res;
       if (sop.status === 'review_rejected') {
@@ -105,7 +99,7 @@ export default function SOPEditor(): JSX.Element {
       } else {
         res = await submitReviewApi(id)
       }
-      
+
       if (res.success) {
         navigate('/author/sops')
       } else {
@@ -138,7 +132,6 @@ export default function SOPEditor(): JSX.Element {
       setGenerated(true)
       setShowPromptPanel(false)
 
-      /* render PDF */
       setIsLoadingPdf(true)
       try {
         const blob = await previewSopPdfApi(id!, gen)
@@ -146,7 +139,7 @@ export default function SOPEditor(): JSX.Element {
         const url = URL.createObjectURL(blob)
         pdfUrlRef.current = url
         setPdfObjectUrl(url)
-      } catch { /* PDF failed but sections are fine */ }
+      } catch 
       finally { setIsLoadingPdf(false) }
     } catch (e: any) {
       setError(e.response?.data?.error || e.message || 'Generation failed.')
@@ -173,7 +166,6 @@ export default function SOPEditor(): JSX.Element {
         .se-gen-btn:disabled { opacity:0.55; cursor:not-allowed; }
       `}</style>
 
-      {/* ─── top bar ─── */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom:'1px solid var(--border)', paddingBottom:'var(--sp-3)' }}>
         <div>
           <h2 style={{ margin:0, fontSize:'17px', fontWeight:700, color:'var(--text-primary)' }}>
@@ -199,17 +191,13 @@ export default function SOPEditor(): JSX.Element {
         </div>
       </div>
 
-      {/* alerts */}
       {error && <div style={{ background:'var(--error-subtle)', color:'var(--error)', padding:'10px 14px', borderRadius:'var(--r-sm)', fontSize:'13px', border:'1px solid rgba(239,68,68,0.2)' }}>{error}</div>}
       {success && <div style={{ background:'rgba(34,197,94,0.08)', color:'#22c55e', padding:'10px 14px', borderRadius:'var(--r-sm)', fontSize:'13px', border:'1px solid rgba(34,197,94,0.2)' }}>{success}</div>}
 
-      {/* ─── body ─── */}
       <div style={{ display:'flex', gap:'var(--sp-5)', alignItems:'flex-start' }}>
 
-        {/* ── LEFT: PDF view or empty state ── */}
         <div style={{ flex:1, minWidth:0, display:'flex', flexDirection:'column', gap:'12px' }}>
 
-          {/* PDF preview */}
           {(pdfObjectUrl || isLoadingPdf) && (
             <div style={{ borderRadius:'var(--r-md)', border:'1px solid rgba(99,102,241,0.3)', overflow:'hidden', animation:'slide-in 0.3s ease' }}>
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'9px 16px', background:'rgba(99,102,241,0.07)', borderBottom:'1px solid rgba(99,102,241,0.18)' }}>
@@ -236,14 +224,13 @@ export default function SOPEditor(): JSX.Element {
                   <p style={{ margin:0, fontSize:'13px', color:'#6366f1', fontWeight:600 }}>Rendering PDF...</p>
                 </div>
               ) : pdfObjectUrl && (
-                /* #navpanes=0 hides the thumbnail sidebar in Chrome/Edge */
+
                 <iframe src={`${pdfObjectUrl}#toolbar=1&navpanes=0&scrollbar=1`} title="SOP PDF"
                   style={{ width:'100%', height:'580px', border:'none', display:'block', background:'#fff', animation:'pdf-show 0.4s ease' }} />
               )}
             </div>
           )}
 
-          {/* empty / generating state */}
           {!pdfObjectUrl && !isLoadingPdf && (
             <div style={{ minHeight:'340px', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'16px', borderRadius:'var(--r-md)', border:'1px dashed var(--border-strong)', background:'rgba(255,255,255,0.01)' }}>
               {isGenerating ? (
@@ -277,13 +264,10 @@ export default function SOPEditor(): JSX.Element {
           )}
         </div>
 
-        {/* ── RIGHT: prompt panel + version history ── */}
         <div style={{ width:'320px', flexShrink:0, display:'flex', flexDirection:'column', gap:'12px' }}>
 
-          {/* ── Prompt panel (always visible) ── */}
           <div style={{ background:'var(--bg-secondary)', border:'1px solid var(--border)', borderRadius:'var(--r-md)', padding:'16px', display:'flex', flexDirection:'column', gap:'12px' }}>
 
-            {/* SOP context — plain text, not chips */}
             <div>
               <p style={{ margin:'0 0 8px', fontSize:'11px', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.07em', color:'#6366f1' }}>SOP Info</p>
               <div style={{ display:'flex', flexDirection:'column', gap:'4px', fontSize:'12.5px', lineHeight:1.5 }}>
@@ -299,10 +283,8 @@ export default function SOPEditor(): JSX.Element {
               </div>
             </div>
 
-            {/* divider */}
             <div style={{ borderTop:'1px solid var(--border)' }} />
 
-            {/* custom prompt textarea */}
             <div>
               <label style={{ display:'block', fontSize:'11px', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.07em', color:'var(--text-secondary)', marginBottom:'6px' }}>
                 Your Prompt <span style={{ fontWeight:400, color: sop?.status === 'review_rejected' ? 'var(--error)' : 'var(--text-muted)', textTransform:'none' }}>{sop?.status === 'review_rejected' ? '(Required: Paste recommendations)' : '(optional)'}</span>
@@ -321,7 +303,6 @@ export default function SOPEditor(): JSX.Element {
               />
             </div>
 
-            {/* Generate button */}
             {sop?.status === 'review_rejected' && !userPrompt.trim() && (
               <div style={{ color: 'var(--error)', fontSize: '11px', textAlign: 'center', marginBottom: '-4px' }}>
                 You must paste recommendations to regenerate.
@@ -359,7 +340,6 @@ export default function SOPEditor(): JSX.Element {
             </p>
           </div>
 
-          {/* version history */}
           {sop && <VersionHistory sopId={sop.id} currentVersion={sop.version} />}
         </div>
       </div>

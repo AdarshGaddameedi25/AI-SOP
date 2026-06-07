@@ -1,23 +1,11 @@
-"""
-routes/sop_routes.py — SOP CRUD and AI generation endpoints.
 
-Role-based access control per enterprise architecture:
-  - POST /create       → author only
-  - GET  /list         → role-filtered (author: own SOPs; reviewer: under_review;
-                          approver: review_approved; admin: all)
-  - GET  /search       → all authenticated roles
-  - GET  /<id>         → all authenticated roles
-  - PUT  /<id>/content → author only (own SOPs), draft or review_rejected status only
-  - POST /generate     → author only
-
-Prefix: /api/v1/sop
-"""
 
 import logging
 
 from flask import Blueprint, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
+from app import limiter, _is_testing
 from models import db
 from models.db_models import SOP, AuditLog, User
 from validators.input_validators import validate_sop_input, validate_sop_content
@@ -42,15 +30,16 @@ AUTHOR_EDITABLE_STATUSES = {"draft", "review_rejected"}
 
 
 def _get_user(user_id: int) -> User | None:
-    """Load the User ORM object for the authenticated user_id."""
+    
     return db.session.get(User, user_id)
 
 
 
 @sop_bp.route("/create", methods=["POST"])
 @jwt_required()
+@limiter.limit("20 per hour", error_message="SOP creation limit reached (20/hour). Please try again later.", exempt_when=_is_testing)
 def create_sop():
-    """Create a new SOP record in DRAFT status. Author role required."""
+
     try:
         user_id = int(get_jwt_identity())
         user = _get_user(user_id)
@@ -104,17 +93,7 @@ def create_sop():
 @sop_bp.route("/list", methods=["GET"])
 @jwt_required()
 def list_sops():
-    """
-    Return a paginated list of SOPs filtered by the caller's role.
 
-    Role-based visibility (enterprise policy):
-      - author   → only their own SOPs (all statuses)
-      - reviewer → all SOPs in 'under_review' (pool-based pickup)
-      - approver → all SOPs in 'review_approved' (ready for final auth)
-      - admin    → all SOPs across all statuses
-
-    Query params: page, limit, status (admin-only filter override)
-    """
     try:
         user_id = int(get_jwt_identity())
         user = _get_user(user_id)
@@ -169,7 +148,7 @@ def list_sops():
 @sop_bp.route("/search", methods=["GET"])
 @jwt_required()
 def search_sops():
-    """Perform search across SOPs by author username."""
+
     try:
         query = request.args.get("q", "").strip()
         if not query:
@@ -200,7 +179,7 @@ def search_sops():
 @sop_bp.route("/<int:sop_id>", methods=["GET"])
 @jwt_required()
 def get_sop(sop_id: int):
-    """Return a single SOP by ID. All authenticated roles may view SOP details."""
+    
     try:
         sop = SOP.query.filter_by(id=sop_id, is_deleted=False).first()
         if sop is None:
@@ -217,15 +196,7 @@ def get_sop(sop_id: int):
 @sop_bp.route("/<int:sop_id>/content", methods=["PUT"])
 @jwt_required()
 def update_sop_content(sop_id: int):
-    """
-    Save or update the structured content for an SOP.
 
-    RESTRICTIONS (enterprise policy):
-      - Author role only — other roles cannot modify document content
-      - Original creator only — authors cannot modify other authors' SOPs
-      - Status guard: only 'draft' or 'review_rejected' SOPs are editable
-        (prevents modification during active review or after approval)
-    """
     try:
         user_id = int(get_jwt_identity())
         user = _get_user(user_id)
@@ -288,15 +259,9 @@ def update_sop_content(sop_id: int):
 
 @sop_bp.route("/generate", methods=["POST"])
 @jwt_required()
+@limiter.limit("5 per minute", error_message="AI generation limit reached (5/min). Wait a moment before retrying.", exempt_when=_is_testing)
 def generate_sop():
-    """
-    Generate FDA-grade SOP content via Gemini AI without persisting to DB.
-    Author role only — document creation is an Author responsibility.
 
-    Accepts the 4 required fields plus all optional FDA metadata parameters.
-    If an sop_id is provided, the SOP's stored metadata is used to pre-populate
-    the FDA-grade fields for the generation prompt.
-    """
     try:
         user_id = int(get_jwt_identity())
         user = _get_user(user_id)
@@ -328,7 +293,6 @@ def generate_sop():
                 pass
 
         def _meta(field: str, fallback: str) -> str:
-            """Read from request body first, then SOP model, then fallback default."""
             if data.get(field):
                 return str(data[field]).strip()
             if sop_meta and getattr(sop_meta, field, None):
@@ -367,10 +331,65 @@ def generate_sop():
         return server_error_response()
 
 
+@sop_bp.route("/<int:sop_id>/classify", methods=["POST"])
+@jwt_required()
+@limiter.limit("5 per minute", error_message="Classification limit reached (5/min). Please wait.", exempt_when=_is_testing)
+def classify_sop(sop_id: int):
+   
+    try:
+        user_id = int(get_jwt_identity())
+        user = _get_user(user_id)
+
+        if user is None:
+            return error_response("Authenticated user not found.", 401)
+
+        sop = SOP.query.filter_by(id=sop_id, is_deleted=False).first()
+        if sop is None:
+            return not_found_response(f"SOP with id {sop_id} not found.")
+
+        logger.info(
+            "Security classification triggered: sop_id=%s user_id=%s role=%s",
+            sop_id, user_id, user.role,
+        )
+
+        classification, ai_error = ai_service.run_security_classification(
+            title=sop.title,
+            description=sop.description or "",
+            content=sop.content or {},
+        )
+
+        if ai_error:
+            logger.warning("Security classification failed: %s", ai_error)
+            return error_response(ai_error, 502)
+
+        sop.risk_level = classification.get("security_risk_level")
+        sop.gxp_classification = classification.get("gxp_classification")
+
+
+        content = dict(sop.content or {})
+        content["security_classification"] = classification
+        sop.content = content
+
+        db.session.commit()
+
+        log_action(
+            db, AuditLog, sop_id, user_id, "SOP_CLASSIFIED",
+            f"AI security classification completed. "
+            f"Risk: {sop.risk_level}, GxP: {sop.gxp_classification}.",
+        )
+
+        return success_response(classification, message="Security classification completed.")
+
+    except Exception:
+        logger.exception("Error during SOP classification sop_id=%s.", sop_id)
+        db.session.rollback()
+        return server_error_response()
+
+
 @sop_bp.route("/<int:sop_id>", methods=["DELETE"])
 @jwt_required()
 def delete_sop(sop_id: int):
-    """Soft delete an SOP by ID and remove its vector from ChromaDB."""
+
     try:
         user_id = int(get_jwt_identity())
         user = _get_user(user_id)
@@ -405,7 +424,7 @@ def delete_sop(sop_id: int):
 @sop_bp.route("/<int:sop_id>/versions", methods=["GET"])
 @jwt_required()
 def get_sop_versions(sop_id: int):
-    """List historical versions of an SOP."""
+
     try:
         sop = SOP.query.filter_by(id=sop_id, is_deleted=False).first()
         if sop is None:
@@ -437,7 +456,7 @@ def get_sop_versions(sop_id: int):
 @sop_bp.route("/versions/<int:version_id>", methods=["GET"])
 @jwt_required()
 def get_sop_version_detail(version_id: int):
-    """Retrieve detailed content of a specific historical SOP version snapshot."""
+
     try:
         from models.db_models import SOPVersionHistory
         version_snapshot = SOPVersionHistory.query.get(version_id)

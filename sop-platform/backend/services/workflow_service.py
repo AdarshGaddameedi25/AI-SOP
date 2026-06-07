@@ -1,22 +1,3 @@
-"""
-services/workflow_service.py — SOP lifecycle transition business logic.
-
-Enterprise 5-Stage Workflow:
-  1. Author creates/edits → DRAFT
-  2. Author submits       → UNDER_REVIEW  (Reviewer quality gate)
-  3a. Reviewer approves  → REVIEW_APPROVED (Approver final auth gate)
-  3b. Reviewer rejects   → REVIEW_REJECTED (back to Author)
-  4. Author resubmits    → DRAFT (after rejection)
-  5. Approver authorizes → FINAL_APPROVED (officially approved)
-  6. Admin archives      → ARCHIVED
-
-Separation of Duties:
-  - Only Author can submit/resubmit their own SOP
-  - Only Reviewer can approve/reject at the quality gate
-  - Only Approver can give final authorization
-  - Only Admin can archive
-  - No role can skip stages
-"""
 
 import logging
 from datetime import datetime, timezone
@@ -32,12 +13,10 @@ def _utcnow() -> datetime:
 
 
 def _get_transition_config(current_status: str, action: str) -> dict | None:
-    """Look up the transition config for a (status, action) pair from constants."""
     return WORKFLOW_TRANSITIONS.get((current_status, action))
 
 
 def _is_original_author(sop, user_id: int) -> bool:
-    """Return True if user_id is the original creator of the SOP."""
     return sop.created_by == user_id
 
 
@@ -53,23 +32,6 @@ def _perform_transition(
     current_user_role: str,
     comments: str | None = None,
 ) -> tuple[dict | None, str | None]:
-    """
-    Core transition executor. Called by every public transition function.
-
-    Steps:
-    1.  Load SOP from DB (404 if not found or soft-deleted).
-    2.  Look up transition config for (current_status, action).
-    3.  Validate current_user_role is allowed for this transition.
-    4.  Author-only check: submit_review / resubmit require original authorship.
-    5.  Reject requires a non-empty comment.
-    6.  Apply new status.
-    7.  Set stage-specific timestamps (reviewer_approved_at, approved_at).
-    8.  Record reviewer / approver assignment.
-    9.  Create Approval record with correct approval_stage.
-    10. Commit.
-    11. Write immutable audit log.
-    12. Return serialized SOP.
-    """
     from utils.helpers import log_action
 
     sop = SOP.query.filter_by(id=sop_id, is_deleted=False).first()
@@ -201,10 +163,6 @@ def _perform_transition(
 
 
 def submit_for_review(db, SOP, AuditLog, Approval, User, sop_id: int, user_id: int, user_role: str):
-    """
-    Stage 1 → 2: Author submits DRAFT SOP for Reviewer quality gate.
-    Only the original author can submit their own SOP.
-    """
     return _perform_transition(
         db, SOP, AuditLog, Approval, User,
         sop_id=sop_id, action="submit_review",
@@ -217,11 +175,6 @@ def reviewer_approve_sop(
     sop_id: int, user_id: int, user_role: str,
     comments: str | None = None,
 ):
-    """
-    Stage 2 → 3a: Reviewer approves the SOP quality gate.
-    SOP moves from UNDER_REVIEW → REVIEW_APPROVED.
-    Only a Reviewer can perform this action.
-    """
     return _perform_transition(
         db, SOP, AuditLog, Approval, User,
         sop_id=sop_id, action="reviewer_approve",
@@ -235,12 +188,6 @@ def reviewer_reject_sop(
     sop_id: int, user_id: int, user_role: str,
     comments: str,
 ):
-    """
-    Stage 2 → 3b: Reviewer rejects the SOP at the quality gate.
-    SOP moves from UNDER_REVIEW → REVIEW_REJECTED.
-    Rejection comments are mandatory.
-    Only a Reviewer can perform this action.
-    """
     return _perform_transition(
         db, SOP, AuditLog, Approval, User,
         sop_id=sop_id, action="reviewer_reject",
@@ -254,12 +201,6 @@ def final_approve_sop(
     sop_id: int, user_id: int, user_role: str,
     comments: str | None = None,
 ):
-    """
-    Stage 3a → 5: Approver grants final business authorization.
-    SOP moves from REVIEW_APPROVED → FINAL_APPROVED.
-    Only an Approver can perform this action.
-    This is the only action Approvers can take — they cannot reject.
-    """
     return _perform_transition(
         db, SOP, AuditLog, Approval, User,
         sop_id=sop_id, action="final_approve",
@@ -272,10 +213,6 @@ def resubmit_sop(
     db, SOP, AuditLog, Approval, User,
     sop_id: int, user_id: int, user_role: str,
 ):
-    """
-    Stage 3b → 1: Author resubmits a rejected SOP back to DRAFT for rework.
-    Only the original author can resubmit their own SOP.
-    """
     return _perform_transition(
         db, SOP, AuditLog, Approval, User,
         sop_id=sop_id, action="resubmit",
@@ -287,11 +224,6 @@ def archive_sop(
     db, SOP, AuditLog, Approval, User,
     sop_id: int, user_id: int, user_role: str,
 ):
-    """
-    Stage 5 → 6: Admin archives a finally-approved SOP.
-    SOP moves from FINAL_APPROVED → ARCHIVED.
-    Only Admin can perform this action.
-    """
     return _perform_transition(
         db, SOP, AuditLog, Approval, User,
         sop_id=sop_id, action="archive",

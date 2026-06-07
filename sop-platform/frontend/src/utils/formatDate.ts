@@ -13,7 +13,6 @@ export function formatDate(iso: string | null | undefined): string {
   }
 }
 
-
 export function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return '—'
   try {
@@ -29,7 +28,6 @@ export function formatDateTime(iso: string | null | undefined): string {
     return '—'
   }
 }
-
 
 export function timeAgo(iso: string | null | undefined): string {
   if (!iso) return '—'
@@ -49,7 +47,6 @@ export function timeAgo(iso: string | null | undefined): string {
     return '—'
   }
 }
-
 
 export function formatCompact(iso: string | null | undefined): string {
   if (!iso) return '—'

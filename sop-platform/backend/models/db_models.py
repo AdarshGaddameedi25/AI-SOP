@@ -1,10 +1,5 @@
-"""
-SQLAlchemy ORM models for the SOP platform.
 
-Enterprise 4-role architecture:
-  Users:   author | reviewer | approver | admin
-  Workflow: draft → under_review → review_approved / review_rejected → final_approved → archived
-"""
+
 
 from datetime import datetime, timezone
 from sqlalchemy import Index
@@ -12,12 +7,12 @@ from models import db
 
 
 def _utcnow() -> datetime:
-    """Return the current UTC datetime (timezone-aware)."""
+
     return datetime.now(timezone.utc)
 
 
 class User(db.Model):
-    """Registered platform user with strict 4-role access control."""
+
 
     __tablename__ = "users"
 
@@ -53,7 +48,7 @@ class User(db.Model):
 
 
 class SOP(db.Model):
-    """Standard Operating Procedure document with full enterprise lifecycle tracking."""
+
 
     __tablename__ = "sops"
 
@@ -79,6 +74,10 @@ class SOP(db.Model):
     current_approver = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
 
     rejection_comments = db.Column(db.Text, nullable=True)
+
+    
+    risk_level = db.Column(db.String(20), nullable=True)        # Low / Medium / High / Critical
+    gxp_classification = db.Column(db.String(20), nullable=True)  # GxP / Non-GxP / GMP / GLP / GCP
 
     is_deleted = db.Column(db.Boolean, nullable=False, default=False)
 
@@ -110,7 +109,6 @@ class SOP(db.Model):
 
     @property
     def created_by_username(self) -> str | None:
-        """Return the username of the SOP creator if available."""
         return self.creator.username if getattr(self, "creator", None) else None
 
 
@@ -121,11 +119,7 @@ Index("idx_sop_current_approver", SOP.current_approver)
 
 
 class ComplianceReport(db.Model):
-    """FDA-grade AI + rule-based compliance audit report.
 
-    COMPLIANCE SEGREGATION: Only Reviewers can trigger reports.
-    Admin can read reports for governance. Authors and Approvers are blocked.
-    """
 
     __tablename__ = "compliance_reports"
 
@@ -157,11 +151,7 @@ class ComplianceReport(db.Model):
 
 
 class AuditLog(db.Model):
-    """Immutable audit trail entry for all system actions.
 
-    Append-only: entries are NEVER updated or deleted.
-    Satisfies 21 CFR Part 11 audit trail requirements.
-    """
 
     __tablename__ = "audit_logs"
 
@@ -185,12 +175,7 @@ Index("idx_audit_user_id", AuditLog.user_id)
 
 
 class Approval(db.Model):
-    """Decision record for both Reviewer quality gate and Approver final authorization.
 
-    approval_stage distinguishes between:
-      'review' — Reviewer quality gate decision (approve/reject)
-      'final'  — Approver final business authorization
-    """
 
     __tablename__ = "approvals"
 
@@ -213,7 +198,6 @@ class Approval(db.Model):
 
 
 class SOPVersionHistory(db.Model):
-    """Immutable snapshot of SOP content for historical tracking."""
 
     __tablename__ = "sop_version_history"
 

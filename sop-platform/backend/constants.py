@@ -1,10 +1,3 @@
-"""
-Application-wide constants — all controlled values live here.
-
-Enterprise SOP Workflow Architecture:
-  Roles:    author → reviewer → approver → admin
-  Statuses: draft → under_review → review_approved / review_rejected → final_approved → archived
-"""
 
 
 DEPARTMENTS = ["IT", "HR", "Finance", "Operations", "Quality"]
@@ -158,6 +151,7 @@ AUDIT_ACTIONS = [
     "SOP_RESUBMITTED",
     "SOP_ARCHIVED",
     "SOP_DELETED",
+    "SOP_CLASSIFIED",
     "COMPLIANCE_CHECKED",
     "PDF_EXPORTED",
     "DOCX_EXPORTED",

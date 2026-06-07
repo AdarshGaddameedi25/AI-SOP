@@ -36,7 +36,6 @@ Please include all standard SOP sections: Purpose, Scope, Responsibilities, Proc
   const [error, setError] = useState<string | null>(null)
   const pdfUrlRef = useRef<string | null>(null)
 
-  // Cleanup blob URL on unmount to avoid memory leaks
   useEffect(() => {
     return () => {
       if (pdfUrlRef.current) {
@@ -64,7 +63,6 @@ Please include all standard SOP sections: Purpose, Scope, Responsibilities, Proc
         const content = res.data.generated_content
         setGeneratedContent(content)
 
-        // Now fetch the PDF preview
         setIsLoadingPdf(true)
         try {
           const blob = await previewSopPdfApi(sopId, content)
@@ -97,7 +95,7 @@ Please include all standard SOP sections: Purpose, Scope, Responsibilities, Proc
 
   return (
     <>
-      {/* ── Styles ── */}
+
       <style>{`
         @keyframes ai-overlay-in {
           from { opacity: 0; transform: translateY(24px) scale(0.98); }
@@ -146,7 +144,6 @@ Please include all standard SOP sections: Purpose, Scope, Responsibilities, Proc
         .ai-prompt-textarea:focus { border-color: #6366f1 !important; outline: none; }
       `}</style>
 
-      {/* ── Backdrop ── */}
       <div
         onClick={onClose}
         style={{
@@ -158,7 +155,6 @@ Please include all standard SOP sections: Purpose, Scope, Responsibilities, Proc
         }}
       />
 
-      {/* ── Modal ── */}
       <div style={{
         position: 'fixed',
         inset: '20px',
@@ -173,7 +169,6 @@ Please include all standard SOP sections: Purpose, Scope, Responsibilities, Proc
         overflow: 'hidden',
       }}>
 
-        {/* ── Header ── */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '16px 24px',
@@ -198,7 +193,6 @@ Please include all standard SOP sections: Purpose, Scope, Responsibilities, Proc
             </div>
           </div>
 
-          {/* Metadata pills */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             {[title, templateType].filter(Boolean).map((pill, i) => (
               <span key={i} style={{
@@ -229,10 +223,8 @@ Please include all standard SOP sections: Purpose, Scope, Responsibilities, Proc
           </div>
         </div>
 
-        {/* ── Body: Left + Right panels ── */}
         <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
 
-          {/* ── LEFT: Prompt Panel (40%) ── */}
           <div style={{
             width: '40%', flexShrink: 0,
             display: 'flex', flexDirection: 'column', gap: '16px',
@@ -272,7 +264,6 @@ Please include all standard SOP sections: Purpose, Scope, Responsibilities, Proc
               </p>
             </div>
 
-            {/* Error */}
             {error && (
               <div style={{
                 padding: '12px 14px',
@@ -286,7 +277,6 @@ Please include all standard SOP sections: Purpose, Scope, Responsibilities, Proc
               </div>
             )}
 
-            {/* Success confirmation */}
             {generatedContent && !isGenerating && (
               <div style={{
                 padding: '12px 14px',
@@ -300,7 +290,6 @@ Please include all standard SOP sections: Purpose, Scope, Responsibilities, Proc
               </div>
             )}
 
-            {/* Generate button */}
             <button
               id="ai-overlay-generate-btn"
               className="ai-generate-btn"
@@ -328,12 +317,11 @@ Please include all standard SOP sections: Purpose, Scope, Responsibilities, Proc
             </button>
           </div>
 
-          {/* ── RIGHT: PDF Preview (60%) ── */}
           <div style={{
             flex: 1, display: 'flex', flexDirection: 'column',
             backgroundColor: '#1a1d2e',
           }}>
-            {/* PDF panel header */}
+
             <div style={{
               padding: '12px 20px',
               borderBottom: '1px solid rgba(255,255,255,0.07)',
@@ -363,9 +351,8 @@ Please include all standard SOP sections: Purpose, Scope, Responsibilities, Proc
               )}
             </div>
 
-            {/* PDF content area */}
             <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
-              {/* Empty state */}
+
               {!pdfObjectUrl && !isLoadingPdf && !isGenerating && (
                 <div style={{
                   position: 'absolute', inset: 0,
@@ -385,7 +372,6 @@ Please include all standard SOP sections: Purpose, Scope, Responsibilities, Proc
                 </div>
               )}
 
-              {/* PDF loading spinner */}
               {isLoadingPdf && (
                 <div style={{
                   position: 'absolute', inset: 0,
@@ -404,7 +390,6 @@ Please include all standard SOP sections: Purpose, Scope, Responsibilities, Proc
                 </div>
               )}
 
-              {/* Generating placeholder in PDF area */}
               {isGenerating && !isLoadingPdf && (
                 <div style={{
                   position: 'absolute', inset: 0,
@@ -429,7 +414,6 @@ Please include all standard SOP sections: Purpose, Scope, Responsibilities, Proc
                 </div>
               )}
 
-              {/* The PDF iframe */}
               {pdfObjectUrl && (
                 <iframe
                   id="ai-pdf-preview-iframe"
@@ -446,7 +430,6 @@ Please include all standard SOP sections: Purpose, Scope, Responsibilities, Proc
           </div>
         </div>
 
-        {/* ── Footer ── */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '14px 24px',

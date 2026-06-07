@@ -1,17 +1,6 @@
-"""
-services/serializer_service.py — Converts ORM model instances to plain dicts.
-
-Enterprise compliance segregation is enforced via role-aware serialization:
-  serialize_sop_for_role(sop, role) strips compliance-sensitive data
-  for roles that are not permitted to see it (author, approver).
-"""
 
 
 def serialize_sop(sop) -> dict:
-    """
-    Serialize a single SOP ORM instance to a JSON-safe dictionary.
-    Full serialization — use serialize_sop_for_role() to apply role-based filtering.
-    """
     return {
         "id": sop.id,
         "sop_number": sop.sop_number,
@@ -39,12 +28,10 @@ def serialize_sop(sop) -> dict:
 
 
 def serialize_sop_list(sops: list) -> list:
-    """Serialize a list of SOP ORM instances to a list of dictionaries."""
     return [serialize_sop(sop) for sop in sops]
 
 
 def serialize_sop_summary(sop) -> dict:
-    """Lightweight serialization for list views — excludes full content JSON."""
     return {
         "id": sop.id,
         "sop_number": sop.sop_number,
@@ -63,17 +50,6 @@ def serialize_sop_summary(sop) -> dict:
 
 
 def serialize_sop_for_role(sop, role: str) -> dict:
-    """
-    Role-aware SOP serialization.
-
-    Compliance segregation rules:
-      - 'author' and 'approver': full SOP data MINUS any compliance-related metadata.
-        (Authors must not self-audit. Approvers assess business fit, not compliance.)
-      - 'reviewer' and 'admin': full SOP data including all fields.
-
-    The compliance data itself (score, reports) is controlled by the compliance_routes.py
-    access guard. This serializer controls what's embedded in the SOP response itself.
-    """
     base = serialize_sop(sop)
 
     if role in ("reviewer", "admin"):
@@ -83,7 +59,6 @@ def serialize_sop_for_role(sop, role: str) -> dict:
 
 
 def serialize_user(user) -> dict:
-    """Serialize a User ORM instance, omitting the password hash."""
     return {
         "id": user.id,
         "username": user.username,
@@ -94,12 +69,6 @@ def serialize_user(user) -> dict:
 
 
 def serialize_compliance_report(report) -> dict:
-    """
-    Serialize a ComplianceReport ORM instance to a dictionary.
-
-    This full serialization is only returned to roles that are authorized
-    (reviewer, admin) — enforced at the route level.
-    """
     triggered_by_username = None
     try:
         if report.triggered_by_user:
@@ -126,7 +95,6 @@ def serialize_compliance_report(report) -> dict:
 
 
 def serialize_audit_log(log_entry) -> dict:
-    """Serialize an AuditLog ORM instance to a dictionary."""
     return {
         "id": log_entry.id,
         "sop_id": log_entry.sop_id,
@@ -140,10 +108,6 @@ def serialize_audit_log(log_entry) -> dict:
 
 
 def serialize_approval(approval) -> dict:
-    """
-    Serialize an Approval ORM instance to a dictionary.
-    Includes approval_stage to distinguish review gate vs final authorization.
-    """
     return {
         "id": approval.id,
         "sop_id": approval.sop_id,

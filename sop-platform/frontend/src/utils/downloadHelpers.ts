@@ -1,6 +1,5 @@
 import { ExportFormat } from '../types'
 
-
 export function triggerBlobDownload(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
@@ -11,7 +10,6 @@ export function triggerBlobDownload(blob: Blob, filename: string): void {
   document.body.removeChild(link)
   setTimeout(() => URL.revokeObjectURL(url), 3000)
 }
-
 
 export function buildSOPFilename(
   sopNumber: string,
@@ -25,7 +23,6 @@ export function buildSOPFilename(
     .slice(0, 50)
   return `${sopNumber}_${sanitized}.${format}`
 }
-
 
 export function getMimeType(format: ExportFormat): string {
   const mimeMap: Record<ExportFormat, string> = {

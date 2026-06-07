@@ -91,7 +91,7 @@ export default function ApproverDashboard(): JSX.Element {
           Loading queue...
         </div>
       ) : sops.length === 0 ? (
-        
+
         <div style={{
           border: '1px dashed var(--border-strong)',
           borderRadius: 'var(--r-lg)',
@@ -110,7 +110,7 @@ export default function ApproverDashboard(): JSX.Element {
           </p>
         </div>
       ) : (
-        
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-4)' }}>
           <div style={{
             border: '1px solid var(--border)',

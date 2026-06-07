@@ -1,6 +1,3 @@
-"""
-auth/jwt_helper.py - JWT utility decorators and helpers.
-"""
 
 import logging
 from functools import wraps
@@ -13,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 
 def role_required(required_role: str):
-    """Decorator that enforces JWT authentication and required user role."""
 
     def decorator(fn):
         @wraps(fn)
@@ -52,7 +48,6 @@ def role_required(required_role: str):
 
 
 def get_current_user():
-    """Return User instance for the currently authenticated identity."""
     from models.db_models import User
 
     identity = get_jwt_identity()

@@ -1,9 +1,3 @@
-"""
-validators/input_validators.py — Pure validation functions.
-
-All validators are pure functions: they accept data dicts and return (bool, errors).
-No database access, no side effects.
-"""
 
 import re
 
@@ -13,13 +7,6 @@ _EMAIL_RE = re.compile(r"^[^\@\s]+@[^\@\s]+\.[^\@\s]+$")
 
 
 def validate_register_input(data: dict) -> tuple[bool, list[str]]:
-    """
-    Validate user registration payload.
-
-    Note: 'role' field in the payload is intentionally ignored at registration.
-    All users register as 'author'. Role is set by Admin separately.
-    We validate username, email, and password only.
-    """
     errors: list[str] = []
 
     username = (data.get("username") or "").strip()
@@ -49,7 +36,6 @@ def validate_register_input(data: dict) -> tuple[bool, list[str]]:
 
 
 def validate_login_input(data: dict) -> tuple[bool, list[str]]:
-    """Validate login payload."""
     errors: list[str] = []
 
     if not (data.get("email") or "").strip():
@@ -62,7 +48,6 @@ def validate_login_input(data: dict) -> tuple[bool, list[str]]:
 
 
 def validate_sop_input(data: dict) -> tuple[bool, list[str]]:
-    """Validate SOP creation / metadata update payload."""
     errors: list[str] = []
 
     title = (data.get("title") or "").strip()
@@ -86,7 +71,6 @@ def validate_sop_input(data: dict) -> tuple[bool, list[str]]:
 
 
 def validate_sop_content(content: dict) -> tuple[bool, list[str]]:
-    """Validate the structured content JSON for an SOP."""
     from constants import SOP_CONTENT_SECTIONS
 
     errors: list[str] = []
@@ -113,12 +97,6 @@ def validate_sop_content(content: dict) -> tuple[bool, list[str]]:
 
 
 def validate_role_assignment(data: dict) -> tuple[bool, list[str]]:
-    """
-    Validate an Admin role-assignment payload.
-
-    Used by PUT /api/v1/admin/users/<id>/role.
-    Ensures the new role is one of the 4 valid enterprise roles.
-    """
     errors: list[str] = []
 
     new_role = (data.get("role") or "").strip()
@@ -135,12 +113,6 @@ def validate_role_assignment(data: dict) -> tuple[bool, list[str]]:
 
 
 def validate_rejection_comments(data: dict) -> tuple[bool, list[str]]:
-    """
-    Validate that rejection comments are present and non-empty.
-
-    Used for reviewer-reject workflow action.
-    Enterprise policy: rejection must include actionable feedback.
-    """
     errors: list[str] = []
 
     comments = (data.get("comments") or "").strip()

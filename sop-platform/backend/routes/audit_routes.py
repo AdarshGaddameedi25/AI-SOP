@@ -1,14 +1,3 @@
-"""
-routes/audit_routes.py - Audit log viewer endpoints (Admin only).
-
-Prefix: /api/v1/audit
-
-Endpoints:
-    GET /api/v1/audit/logs              → Paginated platform-wide audit log
-    GET /api/v1/audit/sop/<sop_id>     → Audit trail for a specific SOP
-
-Both endpoints require JWT authentication AND admin role.
-"""
 
 import logging
 
@@ -32,7 +21,6 @@ audit_bp = Blueprint("audit", __name__)
 
 
 def _require_admin(user_id: int) -> tuple[User | None, str | None]:
-    """Load the user and verify they have admin role. Returns (user, error)."""
     user = db.session.get(User, user_id)
     if user is None:
         return None, "Authenticated user not found."
@@ -45,7 +33,6 @@ def _require_admin(user_id: int) -> tuple[User | None, str | None]:
 @audit_bp.route("/logs", methods=["GET"])
 @jwt_required()
 def get_audit_logs():
-    """Return a paginated list of all audit log entries. Admin only."""
     try:
         user_id = int(get_jwt_identity())
         _, auth_error = _require_admin(user_id)
@@ -89,7 +76,6 @@ def get_audit_logs():
 @audit_bp.route("/sop/<int:sop_id>", methods=["GET"])
 @jwt_required()
 def get_sop_audit_trail(sop_id: int):
-    """Return all audit log entries for a specific SOP. Admin only."""
     try:
         user_id = int(get_jwt_identity())
         _, auth_error = _require_admin(user_id)
