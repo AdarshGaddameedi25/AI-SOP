@@ -33,7 +33,8 @@ CRITICAL INSTRUCTIONS:
 14. If audit trail is required, steps must mention how the system captures it.
 15. If electronic signature required, specify where and by whom.
 16. Language must be imperative: "The System Administrator SHALL..." not "You should..."
-17. Return ONLY the JSON object. No markdown. No code fences. No explanation.
+17. CRITICAL: Keep the entire response concise to avoid hitting output token limits. Limit the procedure to a maximum of 12 essential steps. Limit responsibilities to 4 essential roles.
+18. Return ONLY the JSON object. No markdown. No code fences. No explanation.
 
 REQUIRED OUTPUT FORMAT — return exactly this structure with all fields populated:
 {

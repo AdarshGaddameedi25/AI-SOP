@@ -8,7 +8,7 @@ import google.generativeai as genai
 
 logger = logging.getLogger(__name__)
 
-def _get_openrouter_config() -> tuple[str, str]:
+def _get_ai_configs() -> list[dict]:
 
     try:
         from dotenv import load_dotenv
@@ -20,13 +20,23 @@ def _get_openrouter_config() -> tuple[str, str]:
     except Exception as e:
         logger.warning("Could not dynamically reload .env file: %s", e)
 
-    api_key = os.getenv("OPENROUTER_API_KEY", "")
-    model = os.getenv("OPENROUTER_MODEL", "openai/gpt-oss-120b:free")
+    configs = []
+    gemini_key = os.getenv("GEMINI_API_KEY", "")
+    if gemini_key:
+        configs.append({"provider": "gemini", "key": gemini_key, "model": "gemini-2.5-flash"})
 
-    if not api_key:
-        raise EnvironmentError("OPENROUTER_API_KEY environment variable is not set.")
+    openrouter_key = os.getenv("OPENROUTER_API_KEY", "")
+    if openrouter_key:
+        configs.append({
+            "provider": "openrouter", 
+            "key": openrouter_key, 
+            "model": os.getenv("OPENROUTER_MODEL", "openai/gpt-oss-120b:free")
+        })
 
-    return api_key, model
+    if not configs:
+        raise EnvironmentError("Neither GEMINI_API_KEY nor OPENROUTER_API_KEY is set.")
+
+    return configs
 
 
 _PROMPTS_DIR = os.path.join(os.path.dirname(__file__), "..", "prompts")
@@ -49,49 +59,78 @@ def _strip_markdown_fences(text: str) -> str:
 
 def _call_llm(prompt: str) -> tuple[str | None, str | None]:
     try:
-        api_key, model = _get_openrouter_config()
-        
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-            "HTTP-Referer": "http://localhost:5173",
-            "X-Title": "SOP Platform"
-        }
-
-
-        data = {
-            "model": model,
-            "messages": [
-                {"role": "user", "content": f"You are a helpful AI assistant that outputs only valid JSON data as requested.\n\n{prompt}"}
-            ],
-            "temperature": 0.2,
-            "max_tokens": 2048,
-        }
-        
-        logger.info(f"Sending request to OpenRouter using model: {model}")
-        response = requests.post(
-            url="https://openrouter.ai/api/v1/chat/completions",
-            headers=headers,
-            json=data,
-            timeout=300
-        )
-        
-        if response.status_code != 200:
-            logger.error("OpenRouter API error: %s - %s", response.status_code, response.text)
-            return None, f"OpenRouter API error: {response.status_code}"
-            
-        res_json = response.json()
-        raw = res_json["choices"][0]["message"]["content"]
-        
-        logger.info("OpenRouter raw response length: %d chars.", len(raw))
-        return raw, None
-        
+        configs = _get_ai_configs()
     except EnvironmentError as exc:
-        logger.error("OpenRouter configuration error: %s", exc)
+        logger.error("AI configuration error: %s", exc)
         return None, str(exc)
-    except Exception as exc:
-        logger.exception("OpenRouter API call failed: %s", exc)
-        return None, "AI service is currently unavailable. Please try again later."
+
+    last_error = "No API providers available."
+    
+    for config in configs:
+        provider = config["provider"]
+        api_key = config["key"]
+        model = config["model"]
+        
+        try:
+            if provider == "gemini":
+                genai.configure(api_key=api_key)
+                generative_model = genai.GenerativeModel(model)
+                full_prompt = f"You are a helpful AI assistant that outputs only valid JSON data as requested.\n\n{prompt}"
+                logger.info(f"Sending request to Gemini using model: {model}")
+                
+                response = generative_model.generate_content(
+                    full_prompt,
+                    generation_config=genai.types.GenerationConfig(
+                        temperature=0.2,
+                        max_output_tokens=8192,
+                        response_mime_type="application/json",
+                    )
+                )
+                raw = response.text
+                logger.info("Gemini raw response length: %d chars.", len(raw))
+                return raw, None
+
+            elif provider == "openrouter":
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "http://localhost:5173",
+                    "X-Title": "SOP Platform"
+                }
+                url = "https://openrouter.ai/api/v1/chat/completions"
+                data = {
+                    "model": model,
+                    "messages": [
+                        {"role": "user", "content": f"You are a helpful AI assistant that outputs only valid JSON data as requested.\n\n{prompt}"}
+                    ],
+                    "temperature": 0.2,
+                    "max_tokens": 2048,
+                }
+                
+                logger.info(f"Sending request to openrouter using model: {model}")
+                response = requests.post(
+                    url=url,
+                    headers=headers,
+                    json=data,
+                    timeout=300
+                )
+                
+                if response.status_code != 200:
+                    last_error = f"openrouter API error: {response.status_code}"
+                    logger.error(last_error)
+                    continue
+                    
+                res_json = response.json()
+                raw = res_json["choices"][0]["message"]["content"]
+                
+                logger.info("openrouter raw response length: %d chars.", len(raw))
+                return raw, None
+                
+        except Exception as exc:
+            logger.warning("%s API call failed. Error: %s", provider, exc)
+            last_error = str(exc)
+            
+    return None, f"All AI services failed. Last error: {last_error}"
 
 
 def _parse_and_validate_json(raw_text: str, required_keys: list[str]) -> tuple[dict | None, str | None]:
